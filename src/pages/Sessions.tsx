@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import api from '../services/api';
-import { Search, XCircle, Trash2 } from 'lucide-react';
+import { XCircle, Trash2 } from 'lucide-react';
 
 interface Session {
   _id: string;
@@ -112,9 +112,9 @@ export default function Sessions() {
                   </td>
                   <td className="px-6 py-4 text-right space-x-2">
                     {s.status !== 'cancelled' && s.status !== 'completed' && (
-                      <button onClick={() => handleCancel(s._id)} className="text-orange-600 hover:text-orange-800 p-1 rounded hover:bg-orange-50" title="Cancel"><XCircle className="w-5 h-5"/></button>
+                      <button onClick={() => handleCancel(s._id)} className="text-orange-600 hover:text-orange-800 p-1 rounded hover:bg-orange-50" title="Cancel"><XCircle className="w-5 h-5" /></button>
                     )}
-                    <button onClick={() => handleDelete(s._id)} className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50" title="Delete"><Trash2 className="w-5 h-5"/></button>
+                    <button onClick={() => handleDelete(s._id)} className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50" title="Delete"><Trash2 className="w-5 h-5" /></button>
                   </td>
                 </tr>
               ))}
@@ -123,9 +123,9 @@ export default function Sessions() {
         </div>
         {totalPages > 1 && (
           <div className="px-6 py-3 border-t flex items-center justify-between">
-            <button onClick={() => setPage(p => Math.max(1, p-1))} disabled={page===1} className="px-4 py-2 border rounded-md text-sm disabled:opacity-50">Previous</button>
+            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-4 py-2 border rounded-md text-sm disabled:opacity-50">Previous</button>
             <span className="text-sm text-gray-500">Page {page} of {totalPages}</span>
-            <button onClick={() => setPage(p => Math.min(totalPages, p+1))} disabled={page===totalPages} className="px-4 py-2 border rounded-md text-sm disabled:opacity-50">Next</button>
+            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-4 py-2 border rounded-md text-sm disabled:opacity-50">Next</button>
           </div>
         )}
       </div>
