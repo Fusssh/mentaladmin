@@ -1,19 +1,11 @@
 import { useEffect, useState } from 'react';
-import api from '../services/api';
+import { sessionService } from '../services/session.service';
 import { XCircle, Trash2 } from 'lucide-react';
 
 interface Session {
-  _id: string;
-  userId: string;
-  counselorId?: string;
-  providerName?: string;
-  providerQualification?: string;
-  title?: string;
-  dateTime: string;
-  durationMin: number;
-  status: string;
-  meetingLink?: string;
-  createdAt: string;
+  _id: string; userId: string; counselorId?: string; providerName?: string;
+  providerQualification?: string; title?: string; dateTime: string;
+  durationMin: number; status: string; meetingLink?: string; createdAt: string;
 }
 
 export default function Sessions() {
@@ -26,13 +18,9 @@ export default function Sessions() {
   const fetchSessions = async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams();
-      params.set('page', String(page));
-      params.set('limit', '10');
-      if (statusFilter) params.set('status', statusFilter);
-      const res = await api.get(`/admin/sessions?${params}`);
-      setSessions(res.data.items || []);
-      setTotalPages(Math.ceil((res.data.total || 0) / 10));
+      const data = await sessionService.getAll({ page, limit: 10, status: statusFilter || undefined });
+      setSessions(data.items || []);
+      setTotalPages(Math.ceil((data.total || 0) / 10));
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   };
@@ -41,7 +29,7 @@ export default function Sessions() {
 
   const handleCancel = async (id: string) => {
     try {
-      await api.patch(`/admin/sessions/${id}/cancel`);
+      await sessionService.cancel(id);
       setSessions(s => s.map(x => x._id === id ? { ...x, status: 'cancelled' } : x));
     } catch (err) { console.error(err); }
   };
@@ -49,7 +37,7 @@ export default function Sessions() {
   const handleDelete = async (id: string) => {
     if (!window.confirm('Delete this session permanently?')) return;
     try {
-      await api.delete(`/admin/sessions/${id}`);
+      await sessionService.delete(id);
       setSessions(s => s.filter(x => x._id !== id));
     } catch (err) { console.error(err); }
   };

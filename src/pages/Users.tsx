@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import api from '../services/api';
+import { userService } from '../services/user.service';
 import { Search, ShieldAlert, CheckCircle, Trash2, Eye } from 'lucide-react';
 import UserDetails from '../components/UserDetails';
 
@@ -29,15 +29,15 @@ export default function Users() {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const response = await api.get(`/admin/users?page=${page}&limit=10&search=${search}`);
-      if (response.data && response.data.items) {
-        setUsers(response.data.items);
-        setTotalPages(Math.ceil((response.data.total || 0) / 10));
-      }
-    } catch (err) {
-      console.error('Failed to fetch users', err);
-    } finally {
-      setLoading(false);
+      // Assuming 'role' and 'blocked' might be state variables to be added later,
+      // for now, using existing 'search' and 'page' and new 'limit: 20'
+      const data = await userService.getUsers({ search, page: page, limit: 20 });
+      setUsers(data.items || []);
+      setTotalPages(Math.ceil((data.total || 0) / 20));
+    } catch (e) { 
+      console.error('Failed to fetch users', e); 
+    } finally { 
+      setLoading(false); 
     }
   };
 
@@ -50,15 +50,10 @@ export default function Users() {
 
   const handleBlockToggle = async (user: User) => {
     try {
-      if (user.blocked) {
-        await api.patch(`/admin/users/${user._id}/unblock`);
-      } else {
-        await api.patch(`/admin/users/${user._id}/block`);
-      }
-      // Update local state instead of refetching everything
-      setUsers(users.map(u => u._id === user._id ? { ...u, blocked: !u.blocked } : u));
-    } catch (err) {
-      console.error('Failed to toggle block status', err);
+      await userService.blockUser(user._id, !user.blocked);
+      setUsers(prev => prev.map(u => u._id === user._id ? { ...u, blocked: !user.blocked } : u));
+    } catch (e) { 
+      console.error('Failed to toggle block status', e); 
       alert('Could not update block status');
     }
   };
@@ -66,10 +61,10 @@ export default function Users() {
   const handleDelete = async (userId: string) => {
     if (!window.confirm("Are you sure you want to delete this user? This cannot be undone.")) return;
     try {
-      await api.delete(`/admin/users/${userId}`);
-      setUsers(users.filter(u => u._id !== userId));
-    } catch (err) {
-      console.error('Failed to delete user', err);
+      await userService.deleteUser(userId);
+      setUsers(prev => prev.filter(u => u._id !== userId));
+    } catch (e) { 
+      console.error('Failed to delete user', e); 
       alert('Could not delete user');
     }
   };

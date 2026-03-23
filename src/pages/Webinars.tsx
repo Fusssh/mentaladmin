@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import api from '../services/api';
+import { webinarService } from '../services/webinar.service';
+import { userService } from '../services/user.service';
 import { Plus, Edit, Trash2, XCircle, X, Calendar, Users as UsersIcon, Clock } from 'lucide-react';
 
 interface Webinar {
@@ -26,17 +27,17 @@ export default function Webinars() {
   const fetchWebinars = async () => {
     setLoading(true);
     try {
-      const params = filter ? `?${filter === 'upcoming' ? 'upcoming=true' : `status=${filter}`}` : '';
-      const res = await api.get(`/webinars${params}`);
-      setWebinars(Array.isArray(res.data) ? res.data : res.data.items || []);
+      const params = filter ? (filter === 'upcoming' ? { upcoming: true } : { status: filter }) : undefined;
+      const data = await webinarService.getAll(params);
+      setWebinars(Array.isArray(data) ? data : data.items || []);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   };
 
   const fetchDoctors = async () => {
     try {
-      const res = await api.get('/admin/users?role=doctor');
-      setDoctors(res.data.items || []);
+      const data = await userService.getDoctors({ approved: true });
+      setDoctors(data.items || []);
     } catch (e) { console.error(e); }
   };
 
@@ -55,19 +56,19 @@ export default function Webinars() {
     setSaving(true);
     try {
       const body = { ...form, scheduledAt: new Date(form.scheduledAt).toISOString() };
-      if (editing) { await api.put(`/webinars/${editing._id}`, body); }
-      else { await api.post('/webinars', body); }
+      if (editing) { await webinarService.update(editing._id, body); }
+      else { await webinarService.create(body); }
       setShowForm(false); fetchWebinars();
     } catch (err) { console.error(err); }
     finally { setSaving(false); }
   };
 
   const handleCancel = async (id: string) => {
-    try { await api.patch(`/webinars/${id}/cancel`); fetchWebinars(); } catch (e) { console.error(e); }
+    try { await webinarService.cancel(id); fetchWebinars(); } catch (e) { console.error(e); }
   };
   const handleDelete = async (id: string) => {
     if (!window.confirm('Permanently delete this webinar?')) return;
-    try { await api.delete(`/webinars/${id}`); setWebinars(w => w.filter(x => x._id !== id)); } catch (e) { console.error(e); }
+    try { await webinarService.delete(id); setWebinars(w => w.filter(x => x._id !== id)); } catch (e) { console.error(e); }
   };
 
   const statusBadge = (s: string) => {

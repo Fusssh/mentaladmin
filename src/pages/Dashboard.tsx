@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import api from '../services/api';
+import { analyticsService } from '../services/analytics.service';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
   AreaChart, Area, PieChart, Pie,
@@ -21,16 +21,16 @@ export default function Dashboard() {
   useEffect(() => {
     const load = async () => {
       try {
-        const [dRes, mRes, sRes, tRes] = await Promise.all([
-          api.get('/admin/dashboard'),
-          api.get('/admin/analytics/mood-trend?days=30').catch(() => ({ data: [] })),
-          api.get('/admin/analytics/stress').catch(() => ({ data: [] })),
-          api.get('/admin/analytics/therapy-success').catch(() => ({ data: null })),
+        const [dData, mData, sData, tData] = await Promise.all([
+          analyticsService.getDashboardStats(),
+          analyticsService.getMoodTrend().catch(() => []),
+          analyticsService.getStressLevels().catch(() => []),
+          analyticsService.getTherapySuccess().catch(() => null),
         ]);
-        if (dRes.data) setStats({ totalUsers: dRes.data.totalUsers||0, doctors: dRes.data.doctors||0, patients: dRes.data.patients||0, sessions: dRes.data.sessions||0, pendingWithdraw: dRes.data.pendingWithdraw||0 });
-        setMoodTrend(Array.isArray(mRes.data) ? mRes.data : []);
-        setStressData(Array.isArray(sRes.data) ? sRes.data : []);
-        if (tRes.data) setTherapy(tRes.data);
+        if (dData) setStats({ totalUsers: dData.totalUsers||0, doctors: dData.doctors||0, patients: dData.patients||0, sessions: dData.sessions||0, pendingWithdraw: dData.pendingWithdraw||0 });
+        setMoodTrend(Array.isArray(mData) ? mData : []);
+        setStressData(Array.isArray(sData) ? sData : []);
+        if (tData) setTherapy(tData);
       } catch (err) { console.error(err); }
       finally { setLoading(false); }
     };
@@ -69,13 +69,11 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
       <div>
         <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Dashboard Overview</h2>
         <p className="mt-1 text-sm text-gray-500">Monitor key metrics and platform analytics.</p>
       </div>
 
-      {/* Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {statCards.map(card => (
           <div key={card.title} className="relative overflow-hidden bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all group">
@@ -93,7 +91,6 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* Row 1: Platform Overview + Therapy Success */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
           <h3 className="text-base font-bold text-gray-900 mb-6">Platform Overview</h3>
@@ -142,9 +139,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Row 2: Mood Trend + Stress Levels */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Mood Trend */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-base font-bold text-gray-900">Mood Trend</h3>
@@ -182,7 +177,6 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Stress Levels */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
           <h3 className="text-base font-bold text-gray-900 mb-4">Stress Levels</h3>
           {stressData.length > 0 ? (

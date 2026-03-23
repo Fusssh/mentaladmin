@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import api from '../services/api';
+import { userService } from '../services/user.service';
 import { X, CheckCircle, AlertCircle, Calendar, User as UserIcon, Shield, ShieldX, Activity, Moon, Zap, Target } from 'lucide-react';
 import type { User } from '../pages/Users';
 
@@ -15,8 +15,8 @@ export default function UserDetails({ userId, onClose }: UserDetailsProps) {
   useEffect(() => {
     const fetchUserDetails = async () => {
       try {
-        const response = await api.get(`/admin/users/${userId}`);
-        setUserData(response.data);
+        const data = await userService.getUserById(userId);
+        setUserData(data);
       } catch (err) {
         console.error('Failed to fetch user details', err);
       } finally {

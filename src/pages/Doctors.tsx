@@ -1,34 +1,20 @@
 import { useEffect, useState } from 'react';
-import api from '../services/api';
+import { userService } from '../services/user.service';
 import { Search, CheckCircle, XCircle, Eye, Users as UsersIcon, Calendar } from 'lucide-react';
 
 interface Doctor {
-  _id: string;
-  username: string;
-  email: string;
-  role: string;
-  blocked: boolean;
-  isVerified: boolean;
-  onboardingCompleted: boolean;
-  createdAt: string;
+  _id: string; username: string; email: string; role: string; blocked: boolean;
+  isVerified: boolean; onboardingCompleted: boolean; createdAt: string;
 }
 
 interface Client {
-  _id: string;
-  clientId: { _id: string; username: string; email: string };
-  status: string;
-  createdAt: string;
+  _id: string; clientId: { _id: string; username: string; email: string };
+  status: string; createdAt: string;
 }
 
 interface Session {
-  _id: string;
-  userId: string;
-  providerName: string;
-  providerQualification: string;
-  dateTime: string;
-  durationMin: number;
-  status: string;
-  createdAt: string;
+  _id: string; userId: string; providerName: string; providerQualification: string;
+  dateTime: string; durationMin: number; status: string; createdAt: string;
 }
 
 export default function Doctors() {
@@ -39,7 +25,6 @@ export default function Doctors() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  // Detail panel
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -48,19 +33,11 @@ export default function Doctors() {
   const fetchDoctors = async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams();
-      params.set('page', String(page));
-      params.set('limit', '10');
-      if (search) params.set('search', search);
-      if (filter === 'pending') params.set('isVerified', 'false');
-      const res = await api.get(`/admin/doctors?${params}`);
-      setDoctors(res.data.items || []);
-      setTotalPages(Math.ceil((res.data.total || 0) / 10));
-    } catch (err) {
-      console.error('Failed to fetch doctors', err);
-    } finally {
-      setLoading(false);
-    }
+      const data = await userService.getDoctors({ page, limit: 10, search, isVerified: filter === 'pending' ? false : undefined });
+      setDoctors(data.items || []);
+      setTotalPages(Math.ceil((data.total || 0) / 10));
+    } catch (err) { console.error('Failed to fetch doctors', err); }
+    finally { setLoading(false); }
   };
 
   useEffect(() => {
@@ -70,14 +47,14 @@ export default function Doctors() {
 
   const handleApprove = async (id: string) => {
     try {
-      await api.patch(`/admin/doctors/${id}/approve`);
+      await userService.approveDoctor(id);
       setDoctors(d => d.map(doc => doc._id === id ? { ...doc, isVerified: true } : doc));
     } catch (err) { console.error(err); }
   };
 
   const handleReject = async (id: string) => {
     try {
-      await api.patch(`/admin/doctors/${id}/reject`);
+      await userService.rejectDoctor(id);
       setDoctors(d => d.map(doc => doc._id === id ? { ...doc, isVerified: false } : doc));
     } catch (err) { console.error(err); }
   };
@@ -86,12 +63,12 @@ export default function Doctors() {
     setSelectedDoctor(doctor);
     setDetailLoading(true);
     try {
-      const [cRes, sRes] = await Promise.all([
-        api.get(`/admin/doctors/${doctor._id}/clients`),
-        api.get(`/admin/doctors/${doctor._id}/sessions`),
+      const [cData, sData] = await Promise.all([
+        userService.getDoctorClients(doctor._id),
+        userService.getDoctorSessions(doctor._id),
       ]);
-      setClients(Array.isArray(cRes.data) ? cRes.data : []);
-      setSessions(Array.isArray(sRes.data) ? sRes.data : []);
+      setClients(Array.isArray(cData) ? cData : []);
+      setSessions(Array.isArray(sData) ? sData : []);
     } catch (err) { console.error(err); }
     finally { setDetailLoading(false); }
   };

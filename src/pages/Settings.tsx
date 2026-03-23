@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import api from '../services/api';
+import { userService } from '../services/user.service';
 import { ShieldCheck, Eye, EyeOff, Lock } from 'lucide-react';
 
 export default function Settings() {
@@ -14,11 +14,11 @@ export default function Settings() {
     setLoading(true);
     setMsg(null);
     try {
-      await api.post('/admin/users/create-admin', form);
+      await userService.createAdmin(form);
       setMsg({ type: 'success', text: 'Admin account created successfully.' });
       setForm({ username: '', email: '', password: '', fullName: '' });
     } catch (err: any) {
-      setMsg({ type: 'error', text: err?.response?.data?.message || 'Failed to create admin.' });
+      setMsg({ type: 'error', text: err.message || 'Failed to create admin.' });
     } finally { setLoading(false); }
   };
 

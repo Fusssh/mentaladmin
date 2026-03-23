@@ -1,21 +1,12 @@
 import { useEffect, useState } from 'react';
-import api from '../services/api';
+import { financeService } from '../services/finance.service';
 import { DollarSign, CheckCircle, XCircle, Clock } from 'lucide-react';
 
 interface RevenueSummary {
-  totalRevenue: number;
-  totalWithdrawn: number;
-  pendingWithdrawals: number;
-  netBalance: number;
+  totalRevenue: number; totalWithdrawn: number; pendingWithdrawals: number; netBalance: number;
 }
-
 interface Transaction {
-  _id: string;
-  type: string;
-  amount: number;
-  status: string;
-  createdAt: string;
-  doctorId?: any;
+  _id: string; type: string; amount: number; status: string; createdAt: string; doctorId?: any;
 }
 
 export default function Finance() {
@@ -31,12 +22,12 @@ export default function Finance() {
     const load = async () => {
       setLoading(true);
       try {
-        const [sumRes, pendRes] = await Promise.all([
-          api.get('/admin/revenue/summary'),
-          api.get('/admin/withdrawals/pending'),
+        const [sumData, pendData] = await Promise.all([
+          financeService.getSummary(),
+          financeService.getWithdrawals(),
         ]);
-        setSummary(sumRes.data);
-        setPending(Array.isArray(pendRes.data) ? pendRes.data : pendRes.data.items || []);
+        setSummary(sumData);
+        setPending(Array.isArray(pendData) ? pendData : pendData.items || []);
       } catch (err) { console.error(err); }
       finally { setLoading(false); }
     };
@@ -48,9 +39,9 @@ export default function Finance() {
     const load = async () => {
       setLoading(true);
       try {
-        const res = await api.get(`/admin/transactions?page=${page}&limit=10`);
-        setTransactions(res.data.items || (Array.isArray(res.data) ? res.data : []));
-        setTotalPages(Math.ceil((res.data.total || 0) / 10));
+        const data = await financeService.getTransactions({ page, limit: 10 });
+        setTransactions(data.items || (Array.isArray(data) ? data : []));
+        setTotalPages(Math.ceil((data.total || 0) / 10));
       } catch (err) { console.error(err); }
       finally { setLoading(false); }
     };
@@ -59,13 +50,13 @@ export default function Finance() {
 
   const handleApprove = async (id: string) => {
     try {
-      await api.patch(`/admin/withdrawals/${id}/approve`);
+      await financeService.approveWithdrawal(id);
       setPending(p => p.filter(x => x._id !== id));
     } catch (err) { console.error(err); }
   };
   const handleReject = async (id: string) => {
     try {
-      await api.patch(`/admin/withdrawals/${id}/reject`);
+      await financeService.rejectWithdrawal(id);
       setPending(p => p.filter(x => x._id !== id));
     } catch (err) { console.error(err); }
   };
@@ -80,7 +71,6 @@ export default function Finance() {
   return (
     <div className="space-y-6">
       <div><h2 className="text-2xl font-bold text-gray-900">Finance Management</h2><p className="mt-1 text-sm text-gray-500">Revenue, transactions, and withdrawal management.</p></div>
-
       {summary && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card title="Total Revenue" value={summary.totalRevenue} icon={DollarSign} color="bg-emerald-500" />
@@ -89,12 +79,10 @@ export default function Finance() {
           <Card title="Net Balance" value={summary.netBalance} icon={DollarSign} color="bg-purple-500" />
         </div>
       )}
-
       <div className="flex gap-2">
         <button onClick={() => setTab('pending')} className={`px-4 py-2 rounded-lg text-sm font-medium ${tab === 'pending' ? 'bg-sky-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>Pending Withdrawals ({pending.length})</button>
         <button onClick={() => { setTab('all'); setPage(1); }} className={`px-4 py-2 rounded-lg text-sm font-medium ${tab === 'all' ? 'bg-sky-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>All Transactions</button>
       </div>
-
       <div className="bg-white shadow-sm rounded-2xl border border-gray-100 overflow-hidden">
         {tab === 'pending' ? (
           pending.length === 0 ? <div className="p-10 text-center text-gray-400">No pending withdrawals.</div> : (

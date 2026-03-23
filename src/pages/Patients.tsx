@@ -1,25 +1,15 @@
 import { useEffect, useState } from 'react';
-import api from '../services/api';
+import { userService } from '../services/user.service';
 import { Search, Eye, HeartPulse, BookOpen, ListChecks, Brain } from 'lucide-react';
 
 interface Patient {
-  _id: string;
-  username: string;
-  email: string;
-  blocked: boolean;
-  isVerified: boolean;
-  onboardingCompleted: boolean;
-  createdAt: string;
-  assessmentDocs?: any;
-  wellnessProfile?: any;
+  _id: string; username: string; email: string; blocked: boolean;
+  isVerified: boolean; onboardingCompleted: boolean; createdAt: string;
+  assessmentDocs?: any; wellnessProfile?: any;
 }
 
 interface Activity {
-  mood: any[];
-  sessions: any[];
-  journals: any[];
-  tasks: any[];
-  quizResults: any[];
+  mood: any[]; sessions: any[]; journals: any[]; tasks: any[]; quizResults: any[];
 }
 
 export default function Patients() {
@@ -35,9 +25,9 @@ export default function Patients() {
   const fetchPatients = async () => {
     setLoading(true);
     try {
-      const res = await api.get(`/admin/patients?page=${page}&limit=10&search=${search}`);
-      setPatients(res.data.items || []);
-      setTotalPages(Math.ceil((res.data.total || 0) / 10));
+      const data = await userService.getUsers({ role: 'patient', page, limit: 10, search });
+      setPatients(data.items || []);
+      setTotalPages(Math.ceil((data.total || 0) / 10));
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   };
@@ -51,8 +41,8 @@ export default function Patients() {
     setSelected(p);
     setActLoading(true);
     try {
-      const res = await api.get(`/admin/patients/${p._id}/activity`);
-      setActivity(res.data);
+      const data = await userService.getPatientActivity(p._id);
+      setActivity(data);
     } catch (err) { console.error(err); }
     finally { setActLoading(false); }
   };
@@ -130,14 +120,13 @@ export default function Patients() {
           <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl max-h-[90vh] flex flex-col overflow-hidden">
             <div className="flex items-center justify-between p-6 bg-rose-600 text-white">
               <div><h3 className="text-xl font-bold">{selected.username}</h3><p className="text-rose-100 text-sm">{selected.email}</p></div>
-              <button onClick={() => { setSelected(null); setActivity(null); }} className="p-2 hover:bg-white/10 rounded-lg">✕</button>
+              <button onClick={() => { setSelected(null); setActivity(null); }} className="p-2 hover:bg-white/10 rounded-lg text-white/80 hover:text-white">✕</button>
             </div>
             <div className="flex-1 overflow-y-auto p-6 space-y-8">
               {actLoading ? (
                 <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-rose-600"/></div>
               ) : activity ? (
                 <>
-                  {/* Mood Logs */}
                   <div>
                     <h4 className="text-lg font-bold flex items-center mb-3"><HeartPulse className="w-5 h-5 mr-2 text-rose-500"/>Mood Logs ({activity.mood.length})</h4>
                     <div className="flex flex-wrap gap-3">
@@ -149,7 +138,6 @@ export default function Patients() {
                       ))}
                     </div>
                   </div>
-                  {/* Sessions */}
                   <div>
                     <h4 className="text-lg font-bold flex items-center mb-3"><Brain className="w-5 h-5 mr-2 text-indigo-500"/>Sessions ({activity.sessions.length})</h4>
                     {activity.sessions.length === 0 ? <p className="text-gray-400 text-sm">No sessions.</p> : (
@@ -161,7 +149,6 @@ export default function Patients() {
                       ))}</div>
                     )}
                   </div>
-                  {/* Journals */}
                   <div>
                     <h4 className="text-lg font-bold flex items-center mb-3"><BookOpen className="w-5 h-5 mr-2 text-amber-500"/>Journals ({activity.journals.length})</h4>
                     {activity.journals.length === 0 ? <p className="text-gray-400 text-sm">No journals.</p> : (
@@ -173,7 +160,6 @@ export default function Patients() {
                       ))}</div>
                     )}
                   </div>
-                  {/* Tasks */}
                   <div>
                     <h4 className="text-lg font-bold flex items-center mb-3"><ListChecks className="w-5 h-5 mr-2 text-green-500"/>Tasks ({activity.tasks.length})</h4>
                     {activity.tasks.length === 0 ? <p className="text-gray-400 text-sm">No tasks.</p> : (
@@ -185,7 +171,6 @@ export default function Patients() {
                       ))}</div>
                     )}
                   </div>
-                  {/* Quiz Results */}
                   {activity.quizResults && activity.quizResults.length > 0 && (
                     <div>
                       <h4 className="text-lg font-bold flex items-center mb-3"><Brain className="w-5 h-5 mr-2 text-purple-500"/>Quiz Results ({activity.quizResults.length})</h4>

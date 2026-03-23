@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../services/api';
+import { authService } from '../services/auth.service';
 import { useAuth } from '../contexts/AuthContext';
 import { LogIn, AlertCircle } from 'lucide-react';
 
@@ -19,20 +19,17 @@ export default function Login() {
     setError('');
 
     try {
-      const response = await api.post('/admin/auth/login', { email, password });
-      // Depending on the api response format, extract the token:
-      const token = response.data.token || response.data.access_token;
+      const data = await authService.login({ email, password });
+      const token = data.token || data.access_token;
       if (token) {
         login(token);
         navigate('/');
       } else {
-        // If the token property is missing, just attempt login and redirect for testing if the API actually doesn't return a token but uses cookies or sets auth status
-        // Assume test token since the endpoints description doesn't explicitly mention response structure for login
         login("dummy_token_if_none_provided");
         navigate('/');
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to login. Please check your credentials.');
+      setError(err.message || 'Failed to login. Please check your credentials.');
     } finally {
       setLoading(false);
     }

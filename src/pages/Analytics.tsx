@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import api from '../services/api';
+import { analyticsService } from '../services/analytics.service';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts';
 
 interface TherapySuccess { total: number; completed: number; cancelled: number; successRate: number; }
@@ -13,23 +13,27 @@ export default function Analytics() {
   useEffect(() => {
     const load = async () => {
       try {
-        const [m,s,t] = await Promise.all([
-          api.get('/admin/analytics/mood-trend?days=30'),
-          api.get('/admin/analytics/stress'),
-          api.get('/admin/analytics/therapy-success'),
+        const [m, s, t] = await Promise.all([
+          analyticsService.getMoodTrend(),
+          analyticsService.getStressLevels(),
+          analyticsService.getTherapySuccess(),
         ]);
-        setMoodTrend(Array.isArray(m.data)?m.data:[]);
-        setStressData(Array.isArray(s.data)?s.data:[]);
-        setTherapy(t.data);
-      } catch(e){console.error(e);}
-      finally{setLoading(false);}
+        setMoodTrend(Array.isArray(m) ? m : []);
+        setStressData(Array.isArray(s) ? s : []);
+        setTherapy(t);
+      } catch (e) { console.error(e); }
+      finally { setLoading(false); }
     };
     load();
   }, []);
 
-  if(loading) return <div className="animate-pulse space-y-8"><div className="h-8 bg-gray-200 rounded w-1/4"/><div className="grid grid-cols-1 lg:grid-cols-2 gap-6">{[1,2].map(i=><div key={i} className="h-80 bg-gray-200 rounded-2xl"/>)}</div></div>;
+  if (loading) return <div className="animate-pulse space-y-8"><div className="h-8 bg-gray-200 rounded w-1/4"/><div className="grid grid-cols-1 lg:grid-cols-2 gap-6">{[1,2].map(i=><div key={i} className="h-80 bg-gray-200 rounded-2xl"/>)}</div></div>;
 
-  const tData = therapy?[{name:'Total',value:therapy.total,color:'#6366f1'},{name:'Completed',value:therapy.completed,color:'#22c55e'},{name:'Cancelled',value:therapy.cancelled,color:'#ef4444'}]:[];
+  const tData = therapy ? [
+    { name: 'Total', value: therapy.total, color: '#6366f1' },
+    { name: 'Completed', value: therapy.completed, color: '#22c55e' },
+    { name: 'Cancelled', value: therapy.cancelled, color: '#ef4444' }
+  ] : [];
 
   return (
     <div className="space-y-8">
