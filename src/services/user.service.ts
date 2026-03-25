@@ -1,18 +1,11 @@
 import api from './api';
 
 export const userService = {
-  // Common User Management
+  // ── Common User Management ─────────────────────────────────────────────────
+
   getUsers: async (params: any) => {
     const res = await api.get('/admin/users', { params });
     return res.data;
-  },
-
-  blockUser: async (id: string, blocked: boolean) => {
-    return api.patch(`/admin/users/${id}/block`, { blocked });
-  },
-
-  deleteUser: async (id: string) => {
-    return api.delete(`/admin/users/${id}`);
   },
 
   getUserById: async (id: string) => {
@@ -20,12 +13,29 @@ export const userService = {
     return res.data;
   },
 
-  // Admin Creation (Secret)
+  deleteUser: async (id: string) => {
+    return api.delete(`/admin/users/${id}`);
+  },
+
+  /**
+   * FIX: API has two separate endpoints — /block sets blocked=true, /unblock sets blocked=false.
+   * The old implementation sent a body to /block which was ignored by the server.
+   */
+  blockUser: async (id: string, shouldBlock: boolean) => {
+    const endpoint = shouldBlock
+      ? `/admin/users/${id}/block`
+      : `/admin/users/${id}/unblock`;
+    return api.patch(endpoint);
+  },
+
+  // ── Admin Creation ─────────────────────────────────────────────────────────
+
   createAdmin: async (data: any) => {
     return api.post('/admin/users/create-admin', data);
   },
 
-  // Doctor Specifics
+  // ── Doctor Specifics ───────────────────────────────────────────────────────
+
   getDoctors: async (params: any) => {
     const res = await api.get('/admin/doctors', { params });
     return res.data;
@@ -54,9 +64,10 @@ export const userService = {
     return res.data;
   },
 
-  // Patient Specifics
+  // ── Patient Specifics ──────────────────────────────────────────────────────
+
   getPatientActivity: async (id: string) => {
-    const res = await api.get(`/api/admin/patients/${id}/activity`);
+    const res = await api.get(`/admin/patients/${id}/activity`);
     return res.data;
-  }
+  },
 };

@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'react';
 import { userService } from '../services/user.service';
-import { X, CheckCircle, AlertCircle, Calendar, User as UserIcon, Shield, ShieldX, Activity, Moon, Zap, Target } from 'lucide-react';
+import {
+  X, CheckCircle, AlertCircle, Calendar, User as UserIcon,
+  Shield, ShieldX, Activity, Moon, Zap, Target, RefreshCw,
+} from 'lucide-react';
 import type { User } from '../pages/Users';
+import { cn } from '../lib/utils';
 
 interface UserDetailsProps {
   userId: string;
@@ -11,183 +15,271 @@ interface UserDetailsProps {
 export default function UserDetails({ userId, onClose }: UserDetailsProps) {
   const [userData, setUserData] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
-  useEffect(() => {
-    const fetchUserDetails = async () => {
-      try {
-        const data = await userService.getUserById(userId);
-        setUserData(data);
-      } catch (err) {
-        console.error('Failed to fetch user details', err);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchUserDetails = async () => {
+    setLoading(true);
+    setError(false);
+    try {
+      const data = await userService.getUserById(userId);
+      setUserData(data);
+    } catch (err) {
+      console.error('Failed to fetch user details', err);
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchUserDetails();
-  }, [userId]);
+  useEffect(() => { fetchUserDetails(); }, [userId]);
 
+  // ── Loading ────────────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 backdrop-blur-sm">
-        <div className="bg-white rounded-2xl p-8 shadow-2xl">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
-          <p className="mt-4 text-gray-600 font-medium text-center">Loading details...</p>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm">
+        <div className="bg-white rounded-2xl p-10 shadow-2xl flex flex-col items-center gap-4">
+          <div className="w-12 h-12 rounded-full border-4 border-teal-100 border-t-teal-500 animate-spin" />
+          <p className="text-slate-500 font-medium">Loading user details…</p>
         </div>
       </div>
     );
   }
 
-  if (!userData) return null;
+  // ── Error ──────────────────────────────────────────────────────────────────
+  if (error || !userData) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+        <div className="bg-white rounded-2xl p-10 shadow-2xl flex flex-col items-center gap-4 max-w-sm w-full text-center">
+          <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center">
+            <AlertCircle className="w-7 h-7 text-red-500" />
+          </div>
+          <div>
+            <p className="font-bold text-slate-900">Could not load user</p>
+            <p className="text-sm text-slate-500 mt-1">There was a problem fetching this user's data.</p>
+          </div>
+          <div className="flex gap-3 w-full">
+            <button
+              onClick={fetchUserDetails}
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-teal-600 text-white rounded-xl text-sm font-bold hover:bg-teal-700 transition-colors"
+            >
+              <RefreshCw className="w-4 h-4" /> Retry
+            </button>
+            <button
+              onClick={onClose}
+              className="flex-1 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-200 transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
+  // ── Data ───────────────────────────────────────────────────────────────────
   const assessment = userData.assessmentDocs || {};
+  const wellness = userData.wellnessProfile || {};
+  const answers = Array.isArray(assessment.answers) ? assessment.answers : [];
+
   const scores = [
-    { label: 'Composite', value: assessment.compositeScore, icon: Zap, color: 'text-yellow-600', bg: 'bg-yellow-50' },
-    { label: 'Mood', value: assessment.moodScore, icon: Activity, color: 'text-blue-600', bg: 'bg-blue-50' },
-    { label: 'Sleep', value: assessment.sleepScore, icon: Moon, color: 'text-indigo-600', bg: 'bg-indigo-50' },
-    { label: 'Coping', value: assessment.copingScore, icon: Zap, color: 'text-green-600', bg: 'bg-green-50' },
-    { label: 'Goal', value: assessment.goalScore, icon: Target, color: 'text-rose-600', bg: 'bg-rose-50' },
+    { label: 'Composite', value: assessment.compositeScore, icon: Zap, color: 'text-amber-600', bg: 'bg-amber-50', ring: 'ring-amber-200' },
+    { label: 'Mood', value: assessment.moodScore, icon: Activity, color: 'text-sky-600', bg: 'bg-sky-50', ring: 'ring-sky-200' },
+    { label: 'Sleep', value: assessment.sleepScore, icon: Moon, color: 'text-indigo-600', bg: 'bg-indigo-50', ring: 'ring-indigo-200' },
+    { label: 'Coping', value: assessment.copingScore, icon: Zap, color: 'text-emerald-600', bg: 'bg-emerald-50', ring: 'ring-emerald-200' },
+    { label: 'Goal', value: assessment.goalScore, icon: Target, color: 'text-rose-600', bg: 'bg-rose-50', ring: 'ring-rose-200' },
   ];
 
+  const rolePill: Record<string, string> = {
+    admin: 'bg-purple-100 text-purple-700',
+    doctor: 'bg-emerald-100 text-emerald-700',
+    patient: 'bg-sky-100 text-sky-700',
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm overflow-y-auto">
-      <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl relative max-h-[90vh] flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-100 bg-primary-600">
-          <div className="flex items-center space-x-4 text-white">
-            <div className="h-12 w-12 bg-white/20 rounded-full flex items-center justify-center">
-              <UserIcon className="h-6 w-6" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm overflow-y-auto">
+      <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+
+        {/* ── Header ── */}
+        <div className="flex items-center justify-between px-8 py-6 bg-slate-900 shrink-0">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-teal-500/20 border border-teal-500/30 flex items-center justify-center shrink-0">
+              <UserIcon className="w-6 h-6 text-teal-400" />
             </div>
             <div>
-              <h3 className="text-xl font-bold">{userData.username || 'User Details'}</h3>
-              <p className="text-primary-100 text-sm">{userData.email}</p>
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-black text-white">{userData.username || 'User Details'}</h3>
+                <span className={cn('text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full', rolePill[userData.role] || 'bg-slate-100 text-slate-600')}>
+                  {userData.role}
+                </span>
+              </div>
+              <p className="text-slate-400 text-sm">{userData.email}</p>
             </div>
           </div>
-          <button 
+          <button
             onClick={onClose}
-            className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+            className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-xl transition-colors"
           >
-            <X className="h-6 w-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-8">
-          {/* Quick Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            {scores.map((score, idx) => (
-              <div key={idx} className={`${score.bg} rounded-xl p-4 flex flex-col items-center justify-center text-center space-y-1`}>
-                <score.icon className={`h-5 w-5 ${score.color}`} />
-                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{score.label}</span>
-                <span className={`text-xl font-bold ${score.color}`}>{score.value ?? 'N/A'}</span>
+        {/* ── Body ── */}
+        <div className="flex-1 overflow-y-auto p-8 space-y-8 bg-slate-50">
+
+          {/* Score Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            {scores.map((s) => (
+              <div key={s.label} className={cn('rounded-2xl p-4 flex flex-col items-center gap-2 text-center ring-1', s.bg, s.ring)}>
+                <s.icon className={cn('w-5 h-5', s.color)} />
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">{s.label}</p>
+                <p className={cn('text-2xl font-black', s.color)}>
+                  {s.value !== undefined && s.value !== null ? s.value : '—'}
+                </p>
               </div>
             ))}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
             {/* Wellness Profile */}
-            <div className="space-y-4">
-              <h4 className="flex items-center text-lg font-bold text-gray-900">
-                <Activity className="mr-2 h-5 w-5 text-primary-600" />
-                Wellness Profile
-              </h4>
-              <div className="bg-gray-50 rounded-xl p-5 border border-gray-100">
-                <div className="mb-4">
-                  <span className="text-sm font-medium text-gray-500 block mb-1">Focus Area</span>
-                  <span className="px-3 py-1 bg-primary-100 text-primary-700 rounded-full text-xs font-bold uppercase tracking-wide">
-                    {userData.wellnessProfile?.focusArea || 'General'}
+            <div className="bg-white rounded-2xl border border-slate-100 p-6 space-y-4 shadow-sm">
+              <div className="flex items-center gap-2">
+                <Activity className="w-4 h-4 text-teal-500" />
+                <h4 className="text-sm font-black uppercase tracking-[0.12em] text-slate-500">Wellness Profile</h4>
+              </div>
+
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Focus Area</p>
+                {wellness.focusArea ? (
+                  <span className="inline-flex items-center px-3 py-1 rounded-xl bg-teal-50 text-teal-700 text-xs font-bold uppercase tracking-wide border border-teal-100">
+                    {wellness.focusArea.replace(/_/g, ' ')}
                   </span>
-                </div>
+                ) : (
+                  <span className="text-sm text-slate-400 italic">Not set</span>
+                )}
+              </div>
+
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Identified Issues</p>
+                {wellness.issues?.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {wellness.issues.map((issue: string, i: number) => (
+                      <span key={i} className="px-2.5 py-1 bg-red-50 text-red-600 border border-red-100 rounded-lg text-xs font-semibold">
+                        {issue}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-400 italic">No issues identified</p>
+                )}
+              </div>
+
+              {wellness.suggestedSolutions?.length > 0 && (
                 <div>
-                  <span className="text-sm font-medium text-gray-500 block mb-1">Identified Issues</span>
-                  <div className="flex flex-wrap gap-2">
-                    {userData.wellnessProfile?.issues?.length > 0 ? (
-                      userData.wellnessProfile.issues.map((issue: string, i: number) => (
-                        <span key={i} className="px-2 py-1 bg-red-50 text-red-600 border border-red-100 rounded-md text-xs font-medium">
-                          {issue}
-                        </span>
-                      ))
-                    ) : (
-                      <span className="text-sm text-gray-400 italic">No specific issues identified</span>
-                    )}
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Suggested Programs</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {wellness.suggestedSolutions.map((s: string, i: number) => (
+                      <span key={i} className="px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-lg text-xs font-semibold">
+                        {s}
+                      </span>
+                    ))}
                   </div>
                 </div>
-              </div>
+              )}
             </div>
 
-            {/* Account Info */}
-            <div className="space-y-4">
-              <h4 className="flex items-center text-lg font-bold text-gray-900">
-                <Shield className="mr-2 h-5 w-5 text-primary-600" />
-                Account Details
-              </h4>
-              <div className="bg-white rounded-xl p-4 border border-gray-100 space-y-3 shadow-sm text-sm">
-                <div className="flex justify-between items-center py-2 border-b border-gray-50">
-                  <span className="text-gray-500">User ID</span>
-                  <span className="font-mono text-gray-700">{userData._id}</span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-gray-50">
-                  <span className="text-gray-500">Registered On</span>
-                  <span className="text-gray-700 flex items-center">
-                    <Calendar className="h-3 w-3 mr-1 text-gray-400" />
-                    {new Date(userData.createdAt).toLocaleDateString(undefined, { dateStyle: 'long' })}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-gray-50">
-                  <span className="text-gray-500">Status</span>
-                  {userData.blocked ? (
-                    <span className="flex items-center text-red-600 font-bold uppercase text-[10px] tracking-widest">
-                      <ShieldX className="h-3 w-3 mr-1" /> BLOCKED
-                    </span>
-                  ) : (
-                    <span className="flex items-center text-emerald-600 font-bold uppercase text-[10px] tracking-widest">
-                      <CheckCircle className="h-3 w-3 mr-1" /> ACTIVE
-                    </span>
-                  )}
-                </div>
+            {/* Account Details */}
+            <div className="bg-white rounded-2xl border border-slate-100 p-6 space-y-4 shadow-sm">
+              <div className="flex items-center gap-2">
+                <Shield className="w-4 h-4 text-teal-500" />
+                <h4 className="text-sm font-black uppercase tracking-[0.12em] text-slate-500">Account Details</h4>
               </div>
+              <dl className="space-y-3">
+                {[
+                  { label: 'User ID', value: <span className="font-mono text-xs">{userData._id}</span> },
+                  {
+                    label: 'Registered', value: (
+                      <span className="flex items-center gap-1 text-slate-700">
+                        <Calendar className="w-3 h-3 text-slate-400" />
+                        {new Date(userData.createdAt).toLocaleDateString(undefined, { dateStyle: 'long' })}
+                      </span>
+                    )
+                  },
+                  {
+                    label: 'Status', value: userData.blocked
+                      ? <span className="flex items-center gap-1 text-red-600 font-bold text-xs uppercase tracking-wider"><ShieldX className="w-3.5 h-3.5" /> Blocked</span>
+                      : <span className="flex items-center gap-1 text-emerald-600 font-bold text-xs uppercase tracking-wider"><CheckCircle className="w-3.5 h-3.5" /> Active</span>
+                  },
+                  {
+                    label: 'Onboarding', value: (
+                      <span className={cn('text-xs font-bold uppercase tracking-wide', userData.onboardingCompleted ? 'text-emerald-600' : 'text-amber-500')}>
+                        {userData.onboardingCompleted ? 'Complete' : 'Pending'}
+                      </span>
+                    )
+                  },
+                  {
+                    label: 'Verified', value: (
+                      <span className={cn('text-xs font-bold uppercase tracking-wide', userData.isVerified ? 'text-emerald-600' : 'text-slate-400')}>
+                        {userData.isVerified ? 'Yes' : 'No'}
+                      </span>
+                    )
+                  },
+                ].map(({ label, value }) => (
+                  <div key={label} className="flex justify-between items-center py-2 border-b border-slate-50 last:border-0">
+                    <dt className="text-xs font-semibold text-slate-400">{label}</dt>
+                    <dd className="text-sm text-slate-700">{value}</dd>
+                  </div>
+                ))}
+              </dl>
             </div>
           </div>
 
           {/* Assessment Answers */}
-          <div className="space-y-4">
-            <h4 className="flex items-center text-lg font-bold text-gray-900">
-              <Activity className="mr-2 h-5 w-5 text-primary-600" />
-              Recent Assessment
-            </h4>
-            <div className="space-y-4">
-              {assessment.answers?.length > 0 ? (
-                assessment.answers.map((answer: any, idx: number) => (
-                  <div key={idx} className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
-                    <p className="text-gray-900 font-semibold mb-3 flex items-start">
-                      <span className="mr-3 bg-primary-100 text-primary-700 w-6 h-6 flex items-center justify-center rounded-full text-xs flex-shrink-0">
-                        {idx + 1}
-                      </span>
-                      {answer.questionText}
-                    </p>
-                    <div className="ml-9 p-3 bg-gray-50 border border-gray-200 rounded-lg flex items-center justify-between">
-                      <span className="text-gray-700 font-medium">{answer.selectedOptionText}</span>
-                      <span className="text-xs font-bold text-gray-500 bg-white px-2 py-1 rounded border border-gray-200">
-                        Score: {answer.score}
-                      </span>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-12 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
-                  <AlertCircle className="h-10 w-10 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500 font-medium">No assessment data available for this user.</p>
-                </div>
+          <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm space-y-4">
+            <div className="flex items-center gap-2">
+              <Activity className="w-4 h-4 text-teal-500" />
+              <h4 className="text-sm font-black uppercase tracking-[0.12em] text-slate-500">Assessment Answers</h4>
+              {answers.length > 0 && (
+                <span className="ml-auto text-xs font-bold text-slate-400">{answers.length} question{answers.length !== 1 ? 's' : ''}</span>
               )}
             </div>
+
+            {answers.length > 0 ? (
+              <div className="space-y-3">
+                {answers.map((answer: any, idx: number) => (
+                  <div key={answer._id || idx} className="flex gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                    <span className="w-6 h-6 rounded-lg bg-teal-100 text-teal-700 flex items-center justify-center text-xs font-black shrink-0 mt-0.5">
+                      {idx + 1}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-slate-800 leading-snug">{answer.questionText}</p>
+                      <div className="flex items-center justify-between mt-2 gap-2">
+                        <p className="text-sm text-slate-600">{answer.selectedOptionText}</p>
+                        <span className="shrink-0 text-[10px] font-black uppercase tracking-wider text-teal-600 bg-teal-50 border border-teal-100 px-2 py-0.5 rounded-lg">
+                          Score: {answer.score}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="py-12 text-center">
+                <div className="w-16 h-16 rounded-full bg-slate-50 flex items-center justify-center mx-auto mb-4 border border-dashed border-slate-200">
+                  <AlertCircle className="w-8 h-8 text-slate-300" />
+                </div>
+                <p className="font-bold text-slate-900">No assessment data</p>
+                <p className="text-sm text-slate-500 mt-1">This user hasn't completed an assessment yet.</p>
+              </div>
+            )}
           </div>
         </div>
-        
-        {/* Footer */}
-        <div className="bg-gray-50 p-6 border-t border-gray-100 flex justify-end">
-          <button 
+
+        {/* ── Footer ── */}
+        <div className="px-8 py-4 bg-white border-t border-slate-100 flex justify-end shrink-0">
+          <button
             onClick={onClose}
-            className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg font-bold hover:bg-gray-300 transition-colors"
+            className="px-6 py-2.5 bg-slate-100 text-slate-700 rounded-xl text-sm font-bold hover:bg-slate-200 transition-colors"
           >
             Close
           </button>

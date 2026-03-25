@@ -12,7 +12,7 @@ export const analyticsService = {
   },
 
   getStressLevels: async () => {
-    const res = await api.get('/admin/analytics/stress-levels');
+    const res = await api.get('/admin/analytics/stress');
     return res.data;
   },
 

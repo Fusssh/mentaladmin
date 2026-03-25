@@ -1,21 +1,41 @@
 import { useEffect, useState } from 'react';
 import { userService } from '../services/user.service';
-import { Search, CheckCircle, XCircle, Eye, Users as UsersIcon, Calendar } from 'lucide-react';
+import {
+  Search, CheckCircle, XCircle, Eye,
+  Users as UsersIcon, Calendar, X, ChevronLeft, ChevronRight
+} from 'lucide-react';
+import { Badge } from '../components/ui/Badge';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { Spinner } from '../components/ui/Spinner';
+import { cn } from '../lib/utils';
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface Doctor {
-  _id: string; username: string; email: string; role: string; blocked: boolean;
-  isVerified: boolean; onboardingCompleted: boolean; createdAt: string;
+  _id: string; username: string; email: string; role: string;
+  blocked: boolean; isVerified: boolean; onboardingCompleted: boolean; createdAt: string;
 }
-
 interface Client {
   _id: string; clientId: { _id: string; username: string; email: string };
   status: string; createdAt: string;
 }
-
 interface Session {
   _id: string; userId: string; providerName: string; providerQualification: string;
   dateTime: string; durationMin: number; status: string; createdAt: string;
 }
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const SESSION_CLS: Record<string, string> = {
+  upcoming: 'bg-sky-50 text-sky-700',
+  'in-progress': 'bg-amber-50 text-amber-700',
+  completed: 'bg-emerald-50 text-emerald-700',
+  cancelled: 'bg-red-50 text-red-500',
+};
+const statusCls = (s: string) => SESSION_CLS[s] ?? 'bg-slate-100 text-slate-500';
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export default function Doctors() {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -24,7 +44,6 @@ export default function Doctors() {
   const [filter, setFilter] = useState<'all' | 'pending'>('all');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -33,10 +52,13 @@ export default function Doctors() {
   const fetchDoctors = async () => {
     setLoading(true);
     try {
-      const data = await userService.getDoctors({ page, limit: 10, search, isVerified: filter === 'pending' ? false : undefined });
+      const data = await userService.getDoctors({
+        page, limit: 10, search,
+        isVerified: filter === 'pending' ? false : undefined,
+      });
       setDoctors(data.items || []);
       setTotalPages(Math.ceil((data.total || 0) / 10));
-    } catch (err) { console.error('Failed to fetch doctors', err); }
+    } catch (err) { console.error(err); }
     finally { setLoading(false); }
   };
 
@@ -73,133 +95,214 @@ export default function Doctors() {
     finally { setDetailLoading(false); }
   };
 
-  const statusColor = (s: string) => {
-    switch (s) {
-      case 'upcoming': return 'bg-blue-100 text-blue-800';
-      case 'in-progress': return 'bg-yellow-100 text-yellow-800';
-      case 'completed': return 'bg-green-100 text-green-800';
-      case 'cancelled': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
+  const closeModal = () => setSelectedDoctor(null);
+
+  const pendingCount = doctors.filter(d => !d.isVerified).length;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+
+      {/* ── Header ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Doctor Management</h2>
-          <p className="mt-1 text-sm text-gray-500">Approve, reject, and monitor registered doctors.</p>
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-600 mb-1">Admin</p>
+          <h2 className="text-3xl font-black text-slate-900">Doctors</h2>
+          <p className="text-slate-400 mt-1 text-sm">Approve, reject and monitor registered doctors.</p>
         </div>
-        <div className="flex gap-3 items-center">
-          <select value={filter} onChange={e => { setFilter(e.target.value as 'all'|'pending'); setPage(1); }}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500">
-            <option value="all">All Doctors</option>
-            <option value="pending">Pending Approval</option>
-          </select>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input type="text" placeholder="Search…" value={search} onChange={e => setSearch(e.target.value)}
-              className="pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500 shadow-sm" />
+        <div className="flex flex-wrap gap-3 items-center">
+          {/* Filter pills */}
+          <div className="flex gap-1.5 bg-slate-100 p-1 rounded-xl">
+            {([['all', 'All'], ['pending', 'Pending']] as const).map(([val, label]) => (
+              <button key={val} onClick={() => { setFilter(val); setPage(1); }}
+                className={cn(
+                  'px-4 py-1.5 rounded-lg text-xs font-bold transition-all relative',
+                  filter === val ? 'bg-white shadow-sm text-slate-900' : 'text-slate-400 hover:text-slate-600'
+                )}>
+                {label}
+                {val === 'pending' && pendingCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-400 text-white text-[9px] font-black flex items-center justify-center">
+                    {pendingCount}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Input
+              placeholder="Search doctors…"
+              value={search}
+              onChange={e => { setSearch(e.target.value); setPage(1); }}
+              className="pl-11 bg-white border-slate-200"
+            />
           </div>
         </div>
       </div>
 
-      <div className="bg-white shadow-sm rounded-2xl border border-gray-100 overflow-hidden">
+      {/* ── Table ── */}
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Doctor</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Verified</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Registered</th>
-                <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Actions</th>
+          <table className="min-w-full">
+            <thead>
+              <tr className="border-b border-slate-100 bg-slate-50/60">
+                {['Doctor', 'Status', 'Registered', ''].map(h => (
+                  <th key={h} className={cn(
+                    'px-6 py-4 text-[10px] font-black uppercase tracking-[0.15em] text-slate-400',
+                    h === '' ? 'text-right' : 'text-left'
+                  )}>{h}</th>
+                ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody>
               {loading ? (
-                <tr><td colSpan={4} className="px-6 py-10 text-center text-gray-400">Loading…</td></tr>
+                <tr><td colSpan={4} className="px-6 py-16 text-center">
+                  <Spinner size="lg" className="mx-auto text-emerald-500" />
+                </td></tr>
               ) : doctors.length === 0 ? (
-                <tr><td colSpan={4} className="px-6 py-10 text-center text-gray-400">No doctors found.</td></tr>
+                <tr><td colSpan={4} className="px-6 py-16 text-center text-slate-400 text-sm">No doctors found.</td></tr>
               ) : doctors.map(doc => (
-                <tr key={doc._id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="h-10 w-10 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-700 font-medium text-sm">
+                <tr key={doc._id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors group">
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-black text-sm shrink-0">
                         {doc.username?.charAt(0).toUpperCase() || 'D'}
                       </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">{doc.username}</div>
-                        <div className="text-sm text-gray-500">{doc.email}</div>
+                      <div>
+                        <p className="text-sm font-bold text-slate-900">{doc.username}</p>
+                        <p className="text-xs text-slate-400">{doc.email}</p>
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4">{doc.isVerified
-                    ? <span className="inline-flex items-center text-xs font-medium text-green-700 bg-green-100 px-2.5 py-0.5 rounded-full"><CheckCircle className="w-3 h-3 mr-1"/>Verified</span>
-                    : <span className="inline-flex items-center text-xs font-medium text-amber-700 bg-amber-100 px-2.5 py-0.5 rounded-full"><XCircle className="w-3 h-3 mr-1"/>Pending</span>}
+                  <td className="px-6 py-4">
+                    {doc.isVerified ? (
+                      <Badge className="bg-emerald-50 text-emerald-700 border-none text-[10px] font-bold flex items-center gap-1 w-fit">
+                        <CheckCircle className="w-3 h-3" /> Verified
+                      </Badge>
+                    ) : (
+                      <Badge className="bg-amber-50 text-amber-700 border-none text-[10px] font-bold flex items-center gap-1 w-fit">
+                        <XCircle className="w-3 h-3" /> Pending
+                      </Badge>
+                    )}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-500">{new Date(doc.createdAt).toLocaleDateString()}</td>
-                  <td className="px-6 py-4 text-right space-x-2">
-                    <button onClick={() => openDetails(doc)} className="text-sky-600 hover:text-sky-800 p-1 rounded hover:bg-sky-50" title="View Details"><Eye className="w-5 h-5"/></button>
-                    {!doc.isVerified && <button onClick={() => handleApprove(doc._id)} className="text-green-600 hover:text-green-800 p-1 rounded hover:bg-green-50" title="Approve"><CheckCircle className="w-5 h-5"/></button>}
-                    {doc.isVerified && <button onClick={() => handleReject(doc._id)} className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50" title="Reject"><XCircle className="w-5 h-5"/></button>}
+                  <td className="px-6 py-4">
+                    <span className="text-xs text-slate-400">{new Date(doc.createdAt).toLocaleDateString()}</span>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-sky-600 hover:bg-sky-50 rounded-xl"
+                        onClick={() => openDetails(doc)}>
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                      {!doc.isVerified && (
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl"
+                          onClick={() => handleApprove(doc._id)} title="Approve">
+                          <CheckCircle className="w-4 h-4" />
+                        </Button>
+                      )}
+                      {doc.isVerified && (
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl"
+                          onClick={() => handleReject(doc._id)} title="Revoke">
+                          <XCircle className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+
         {totalPages > 1 && (
-          <div className="px-6 py-3 border-t border-gray-200 flex items-center justify-between">
-            <button onClick={() => setPage(p => Math.max(1, p-1))} disabled={page===1} className="px-4 py-2 border rounded-md text-sm disabled:opacity-50">Previous</button>
-            <span className="text-sm text-gray-500">Page {page} of {totalPages}</span>
-            <button onClick={() => setPage(p => Math.min(totalPages, p+1))} disabled={page===totalPages} className="px-4 py-2 border rounded-md text-sm disabled:opacity-50">Next</button>
+          <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-400">Page {page} of {totalPages}</span>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" className="h-8 w-8 p-0 rounded-xl"
+                onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              <Button variant="outline" size="sm" className="h-8 w-8 p-0 rounded-xl"
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         )}
       </div>
 
-      {/* Doctor Detail Modal */}
+      {/* ════════════ Doctor Detail Modal ════════════ */}
       {selectedDoctor && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm overflow-y-auto">
-          <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl max-h-[90vh] flex flex-col overflow-hidden">
-            <div className="flex items-center justify-between p-6 bg-emerald-600 text-white">
-              <div>
-                <h3 className="text-xl font-bold">{selectedDoctor.username}</h3>
-                <p className="text-emerald-100 text-sm">{selectedDoctor.email}</p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-3xl rounded-2xl shadow-2xl flex flex-col max-h-[90vh]">
+
+            {/* header */}
+            <div className="flex items-center justify-between px-7 py-5 bg-emerald-600 rounded-t-2xl shrink-0">
+              <div className="flex items-center gap-4">
+                <div className="w-11 h-11 rounded-full bg-white/20 flex items-center justify-center text-white font-black text-lg">
+                  {selectedDoctor.username?.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <p className="font-black text-white text-lg leading-tight">{selectedDoctor.username}</p>
+                  <p className="text-emerald-200 text-xs">{selectedDoctor.email}</p>
+                </div>
               </div>
-              <button onClick={() => setSelectedDoctor(null)} className="p-2 hover:bg-white/10 rounded-lg text-white/80 hover:text-white">✕</button>
+              <button onClick={closeModal} className="p-2 hover:bg-white/10 rounded-xl transition-colors text-white/70 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
             </div>
-            <div className="flex-1 overflow-y-auto p-6 space-y-8">
+
+            {/* body */}
+            <div className="flex-1 overflow-y-auto px-7 py-7 space-y-8 custom-scrollbar">
               {detailLoading ? (
-                <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-emerald-600"/></div>
+                <div className="flex justify-center py-16">
+                  <Spinner size="lg" className="text-emerald-500" />
+                </div>
               ) : (
                 <>
+                  {/* Clients */}
                   <div>
-                    <h4 className="text-lg font-bold text-gray-900 flex items-center mb-4"><UsersIcon className="w-5 h-5 mr-2 text-emerald-600"/>Linked Clients ({clients.length})</h4>
-                    {clients.length === 0 ? <p className="text-gray-400 text-sm">No linked clients.</p> : (
-                      <div className="grid gap-3">
+                    <div className="flex items-center gap-2.5 mb-4">
+                      <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600"><UsersIcon className="w-4 h-4" /></div>
+                      <h4 className="font-bold text-slate-900 text-sm">Linked Clients</h4>
+                      <Badge variant="outline" className="ml-auto text-[10px] font-bold text-slate-400 border-slate-200">{clients.length}</Badge>
+                    </div>
+                    {clients.length === 0 ? (
+                      <p className="text-slate-300 text-sm py-2">No linked clients.</p>
+                    ) : (
+                      <div className="space-y-2">
                         {clients.map(c => (
-                          <div key={c._id} className="flex items-center justify-between bg-gray-50 rounded-xl p-4 border border-gray-100">
+                          <div key={c._id} className="flex items-center justify-between bg-slate-50 rounded-2xl p-4 border border-slate-100">
                             <div>
-                              <p className="font-medium text-gray-900">{c.clientId?.username || 'Unknown'}</p>
-                              <p className="text-sm text-gray-500">{c.clientId?.email}</p>
+                              <p className="font-bold text-slate-900 text-sm">{c.clientId?.username || 'Unknown'}</p>
+                              <p className="text-xs text-slate-400">{c.clientId?.email}</p>
                             </div>
-                            <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full ${c.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>{c.status}</span>
+                            <Badge className={cn('border-none text-[10px] font-bold',
+                              c.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'
+                            )}>{c.status}</Badge>
                           </div>
                         ))}
                       </div>
                     )}
                   </div>
+
+                  {/* Sessions */}
                   <div>
-                    <h4 className="text-lg font-bold text-gray-900 flex items-center mb-4"><Calendar className="w-5 h-5 mr-2 text-emerald-600"/>Sessions ({sessions.length})</h4>
-                    {sessions.length === 0 ? <p className="text-gray-400 text-sm">No sessions.</p> : (
-                      <div className="grid gap-3">
+                    <div className="flex items-center gap-2.5 mb-4">
+                      <div className="p-2 rounded-xl bg-sky-50 text-sky-600"><Calendar className="w-4 h-4" /></div>
+                      <h4 className="font-bold text-slate-900 text-sm">Sessions</h4>
+                      <Badge variant="outline" className="ml-auto text-[10px] font-bold text-slate-400 border-slate-200">{sessions.length}</Badge>
+                    </div>
+                    {sessions.length === 0 ? (
+                      <p className="text-slate-300 text-sm py-2">No sessions recorded.</p>
+                    ) : (
+                      <div className="space-y-2">
                         {sessions.map(s => (
-                          <div key={s._id} className="flex items-center justify-between bg-gray-50 rounded-xl p-4 border border-gray-100">
+                          <div key={s._id} className="flex items-center justify-between bg-slate-50 rounded-2xl p-4 border border-slate-100">
                             <div>
-                              <p className="font-medium text-gray-900">{s.providerName}</p>
-                              <p className="text-xs text-gray-500">{new Date(s.dateTime).toLocaleString()} · {s.durationMin} min</p>
+                              <p className="font-bold text-slate-900 text-sm">{s.providerName}</p>
+                              <p className="text-xs text-slate-400">{new Date(s.dateTime).toLocaleString()} · {s.durationMin} min</p>
                             </div>
-                            <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full ${statusColor(s.status)}`}>{s.status}</span>
+                            <Badge className={cn('border-none text-[10px] font-bold', statusCls(s.status))}>{s.status}</Badge>
                           </div>
                         ))}
                       </div>
@@ -208,8 +311,10 @@ export default function Doctors() {
                 </>
               )}
             </div>
-            <div className="bg-gray-50 p-4 border-t flex justify-end">
-              <button onClick={() => setSelectedDoctor(null)} className="px-5 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300">Close</button>
+
+            {/* footer */}
+            <div className="px-7 py-4 border-t border-slate-100 shrink-0 flex justify-end">
+              <Button variant="outline" onClick={closeModal} className="rounded-xl">Close</Button>
             </div>
           </div>
         </div>
