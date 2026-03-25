@@ -12,6 +12,7 @@ import Finance from './pages/Finance';
 import Analytics from './pages/Analytics';
 import Resources from './pages/Resources';
 import Webinars from './pages/Webinars';
+import Quizzes from './pages/Quizzes';
 import Settings from './pages/Settings';
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
@@ -33,6 +34,7 @@ function AppRoutes() {
         <Route path="finance" element={<Finance />} />
         <Route path="analytics" element={<Analytics />} />
         <Route path="resources" element={<Resources />} />
+        <Route path="quizzes" element={<Quizzes />} />
         <Route path="webinars" element={<Webinars />} />
         <Route path="settings" element={<Settings />} />
       </Route>

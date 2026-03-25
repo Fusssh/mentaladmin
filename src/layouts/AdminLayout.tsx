@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { LayoutDashboard, Users, LogOut, Menu, Stethoscope, HeartPulse, Calendar, DollarSign, BarChart3, BookOpen, Video, Lock } from 'lucide-react';
+import { LayoutDashboard, Users, LogOut, Menu, Stethoscope, HeartPulse, Calendar, DollarSign, BarChart3, BookOpen, Video, Lock, ClipboardList } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -23,6 +23,7 @@ export default function AdminLayout() {
     { name: 'Finance', path: '/finance', icon: DollarSign },
     { name: 'Analytics', path: '/analytics', icon: BarChart3 },
     { name: 'Resources', path: '/resources', icon: BookOpen },
+    { name: 'Quizzes', path: '/quizzes', icon: ClipboardList },
     { name: 'Webinars', path: '/webinars', icon: Video },
     { name: 'Settings', path: '/settings', icon: Lock },
   ];
