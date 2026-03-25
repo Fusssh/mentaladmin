@@ -37,6 +37,7 @@ export default function Resources() {
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Resource | null>(null);
   const [form, setForm] = useState(initialForm);
+  const [submitting, setSubmitting] = useState(false); // ← duplicate-submit guard
 
   const fetchResources = async () => {
     setLoading(true);
@@ -68,18 +69,29 @@ export default function Resources() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Block re-entry — prevents StrictMode double-invoke & rapid clicks
+    if (submitting) return;
+    setSubmitting(true);
+
     const payload = {
       ...form,
       moodTags: form.moodTags.split(',').map(t => t.trim()).filter(t => t),
       tags: form.tags.split(',').map(t => t.trim()).filter(t => t),
     };
+
     try {
-      if (editing) await resourceService.update(editing._id, payload);
-      else await resourceService.create(payload);
+      if (editing) {
+        await resourceService.update(editing._id, payload);
+      } else {
+        await resourceService.create(payload);
+      }
       closeModal();
       fetchResources();
     } catch (e) {
       console.error(e);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -179,15 +191,10 @@ export default function Resources() {
 
       {/* ── Modal ── */}
       {showModal && (
-        /* Backdrop: centers the panel, does NOT scroll */
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm">
-          {/*
-           * Panel: capped at 90vh with flex-col so header & footer
-           * are always visible and only the body scrolls.
-           */}
           <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl flex flex-col max-h-[90vh]">
 
-            {/* ── Sticky Header ── */}
+            {/* Sticky Header */}
             <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100 shrink-0">
               <h3 className="text-xl font-bold text-gray-900">
                 {editing ? 'Edit Resource' : 'New Resource'}
@@ -200,7 +207,7 @@ export default function Resources() {
               </button>
             </div>
 
-            {/* ── Scrollable Body ── */}
+            {/* Scrollable Body */}
             <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
               <div className="overflow-y-auto flex-1 px-6 py-5">
                 <div className="grid grid-cols-2 gap-4">
@@ -314,13 +321,14 @@ export default function Resources() {
                 </div>
               </div>
 
-              {/* ── Sticky Footer ── */}
+              {/* Sticky Footer */}
               <div className="px-6 py-4 border-t border-gray-100 shrink-0">
                 <button
                   type="submit"
-                  className="w-full py-3 bg-sky-600 text-white font-bold rounded-xl hover:bg-sky-700 transition-all shadow-lg shadow-sky-100"
+                  disabled={submitting}
+                  className="w-full py-3 bg-sky-600 text-white font-bold rounded-xl hover:bg-sky-700 transition-all shadow-lg shadow-sky-100 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  {editing ? 'Save Changes' : 'Create Resource'}
+                  {submitting ? 'Saving…' : editing ? 'Save Changes' : 'Create Resource'}
                 </button>
               </div>
             </form>
