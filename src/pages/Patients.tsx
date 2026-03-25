@@ -2,13 +2,13 @@ import { useEffect, useState } from 'react';
 import { userService } from '../services/user.service';
 import {
   Search, Eye, HeartPulse, BookOpen, ListChecks,
-  Brain, X, ChevronLeft, ChevronRight, User
+  Brain, X, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Spinner } from '../components/ui/Spinner';
-import { Card, CardContent } from '../components/ui/Card';
+// import { Card, CardContent } from '../components/ui/Card';
 import { cn } from '../lib/utils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────

@@ -3,7 +3,7 @@ import { resourceService } from '../services/resource.service';
 import {
   Plus, Edit, Trash2, FileText, Search,
   BookOpen, Dumbbell, Headphones, Youtube,
-  Star, Link, ImageIcon, Tag, X, ExternalLink
+  Star, Link, ImageIcon, ExternalLink
 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../components/ui/Card';

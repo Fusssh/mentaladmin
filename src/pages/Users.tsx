@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { userService } from '../services/user.service';
 import {
-  Search, ShieldAlert, CheckCircle, Trash2, Eye, Users as UsersIcon,
+  Search, ShieldAlert, Trash2, Eye, Users as UsersIcon,
   UserCheck, UserX, Stethoscope, ShieldCheck,
 } from 'lucide-react';
 import UserDetails from '../components/UserDetails';

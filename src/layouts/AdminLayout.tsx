@@ -3,8 +3,8 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import {
   LayoutDashboard, Users, LogOut, Menu, Stethoscope, HeartPulse,
-  Calendar, DollarSign, BarChart3, BookOpen, Video, Lock,
-  ClipboardList, X, Sparkles, ChevronRight,
+  Calendar, BarChart3, BookOpen, Video, Lock,
+  ClipboardList, X, Sparkles,
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
