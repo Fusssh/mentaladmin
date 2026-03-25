@@ -101,7 +101,7 @@ export default function AdminLayout() {
                 <Sparkles className="w-4 h-4 text-white" />
               </div>
               <div>
-                <p className="text-white font-black text-[15px] leading-none tracking-tight">MindCare</p>
+                <p className="text-white font-black text-[15px] leading-none tracking-tight">MentalHealth</p>
                 <p className="text-[9px] font-semibold tracking-widest uppercase mt-0.5" style={{ color: 'rgba(167,139,250,0.6)' }}>Admin Panel</p>
               </div>
             </div>
@@ -205,7 +205,7 @@ export default function AdminLayout() {
               >
                 <Sparkles className="w-3.5 h-3.5 text-white" />
               </div>
-              <span className="font-black text-slate-900">MindCare</span>
+              <span className="font-black text-slate-900">MentalHealth</span>
             </div>
             <div className="w-9" />
           </header>
